@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>Items & Calculator</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <style>
+    body {
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f5f7fb;
+      color: #222;
+      margin: 0;
+      padding: 20px;
+    }
+
+    h1 {
+      margin-top: 0;
+      text-align: center;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: 0 auto;
+    }
+
+    .section {
+      background: #fff;
+      border-radius: 10px;
+      padding: 16px;
+      margin-bottom: 20px;
+      box-shadow: 0 2px 6px rgba(0,0,0,0.06);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 10px;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2 {
+      margin: 0;
+      font-size: 1.1rem;
+    }
+
+    button {
+      border: none;
+      border-radius: 6px;
+      padding: 6px 10px;
+      cursor: pointer;
+      font-size: 0.9rem;
+      background: #2563eb;
+      color: white;
+    }
+
+    button:hover {
+      background: #1d4ed8;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    button.secondary:hover {
+      background: #d1d5db;
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 0.9rem;
+    }
+
+    th, td {
+      border-bottom: 1px solid #e5e7eb;
+      padding: 6px 4px;
+      text-align: left;
+    }
+
+    th {
+      background: #f3f4f6;
+      font-weight: 600;
+    }
+
+    tr:last-child td {
+      border-bottom: none;
+    }
+
+    input[type="text"],
+    input[type="number"],
+    select {
+      width: 100%;
+      padding: 4px 6px;
+      font-size: 0.9rem;
+      border-radius: 6px;
+      border: 1px solid #d1d5db;
+      box-sizing: border-box;
+      background: #fff;
+    }
+
+    input[readonly] {
+      background: #f9fafb;
+    }
+
+    .remove-btn {
+      padding: 2px 8px;
+      font-size: 0.8rem;
+    }
+
+    .totals-row td {
+      font-weight: 600;
+      border-top: 1px solid #9ca3af;
+      border-bottom: none;
+    }
+
+    .totals-row span {
+      font-variant-numeric: tabular-nums;
+    }
+
+    @media (max-width: 700px) {
+      body {
+        padding: 10px;
+      }
+
+      .section {
+        padding: 10px;
+      }
+
+      table, thead, tbody, th, td, tr {
+        font-size: 0.8rem;
+      }
+
+      th, td {
+        padding: 4px 2px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Items & Unit Price Calculator</h1>
+
+    <!-- ITEMS SECTION -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Items Table</h2>
+        <button id="add-item">+ Add Item</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:40%">Name</th>
+            <th style="width:20%">Base Unit</th>
+            <th style="width:25%">Base Price (per base unit)</th>
+            <th style="width:15%">Actions</th>
+          </tr>
+        </thead>
+        <tbody id="items-body">
+          <!-- Initial sample rows -->
+          <tr>
+            <td><input type="text" class="item-name" placeholder="Flour" value="Flour"></td>
+            <td>
+              <select class="item-base-unit">
+                <option value="">--</option>
+                <option value="g" selected>g</option>
+                <option value="kg">kg</option>
+                <option value="m">m</option>
+                <option value="pieces">pieces</option>
+              </select>
+            </td>
+            <td><input type="number" class="item-base-price" step="0.0001" min="0" value="0.01"></td>
+            <td><button class="remove-btn secondary">✕</button></td>
+          </tr>
+          <tr>
+            <td><input type="text" class="item-name" placeholder="Wax"></td>
+            <td>
+              <select class="item-base-unit">
+                <option value="">--</option>
+                <option value="g">g</option>
+                <option value="kg">kg</option>
+                <option value="m">m</option>
+                <option value="pieces">pieces</option>
+              </select>
+            </td>
+            <td><input type="number" class="item-base-price" step="0.0001" min="0"></td>
+            <td><button class="remove-btn secondary">✕</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- CALCULATOR SECTION -->
+    <div class="section">
+      <div class="section-header">
+        <h2>Calculator</h2>
+        <button id="rebuild-calculator" class="secondary">↻ Refresh from Items</button>
+      </div>
+      <table>
+        <thead>
+          <tr>
+            <th style="width:30%">Name</th>
+            <th style="width:18%">Selected Unit</th>
+            <th style="width:18%">Price / Unit</th>
+            <th style="width:18%">Quantity</th>
+            <th style="width:16%">Total</th>
+          </tr>
+        </thead>
+        <tbody id="calc-body">
+          <!-- rows auto-generated from items -->
+        </tbody>
+        <tfoot>
+          <tr class="totals-row">
+            <td colspan="4" style="text-align:right;">Grand Total:</td>
+            <td><span id="grand-total">0.00</span></td>
+          </tr>
+        </tfoot>
+      </table>
+    </div>
+  </div>
+
+  <script>
+    const itemsBody = document.getElementById('items-body');
+    const calcBody = document.getElementById('calc-body');
+    const addItemBtn = document.getElementById('add-item');
+    const rebuildCalcBtn = document.getElementById('rebuild-calculator');
+    const grandTotalSpan = document.getElementById('grand-total');
+
+    const ALLOWED_UNITS = ['g', 'kg', 'm', 'pieces'];
+
+    function createBaseUnitSelect() {
+      const select = document.createElement('select');
+      select.className = 'item-base-unit';
+      const emptyOpt = document.createElement('option');
+      emptyOpt.value = '';
+      emptyOpt.textContent = '--';
+      select.appendChild(emptyOpt);
+
+      ALLOWED_UNITS.forEach(u => {
+        const opt = document.createElement('option');
+        opt.value = u;
+        opt.textContent = u;
+        select.appendChild(opt);
+      });
+
+      return select;
+    }
+
+    function addItemRow(name = '', baseUnit = '', basePrice = '') {
+      const tr = document.createElement('tr');
+
+      const nameTd = document.createElement('td');
+      const nameInput = document.createElement('input');
+      nameInput.type = 'text';
+      nameInput.className = 'item-name';
+      nameInput.placeholder = 'Item name';
+      nameInput.value = name;
+      nameTd.appendChild(nameInput);
+
+      const unitTd = document.createElement('td');
+      const unitSelect = createBaseUnitSelect();
+      unitSelect.value = baseUnit;
+      unitTd.appendChild(unitSelect);
+
+      const priceTd = document.createElement('td');
+      const priceInput = document.createElement('input');
+      priceInput.type = 'number';
+      priceInput.className = 'item-base-price';
+      priceInput.step = '0.0001';
+      priceInput.min = '0';
+      priceInput.value = basePrice;
+      priceTd.appendChild(priceInput);
+
+      const actionTd = document.createElement('td');
+      const removeBtn = document.createElement('button');
+      removeBtn.textContent = '✕';
+      removeBtn.className = 'remove-btn secondary';
+      actionTd.appendChild(removeBtn);
+
+      tr.appendChild(nameTd);
+      tr.appendChild(unitTd);
+      tr.appendChild(priceTd);
+      tr.appendChild(actionTd);
+
+      itemsBody.appendChild(tr);
+    }
+
+    addItemBtn.addEventListener('click', () => {
+      addItemRow();
+      rebuildCalculator();
+    });
+
+    // Remove item row
+    itemsBody.addEventListener('click', (e) => {
+      if (e.target.classList.contains('remove-btn')) {
+        e.target.closest('tr').remove();
+        rebuildCalculator();
+      }
+    });
+
+    // When items change, rebuild calculator
+    itemsBody.addEventListener('input', debounce(rebuildCalculator, 200));
+    itemsBody.addEventListener('change', debounce(rebuildCalculator, 200));
+    rebuildCalcBtn.addEventListener('click', rebuildCalculator);
+
+    function getItemsFromTable() {
+      const rows = itemsBody.querySelectorAll('tr');
+      const items = [];
+      rows.forEach(row => {
+        const name = row.querySelector('.item-name')?.value.trim();
+        const baseUnit = row.querySelector('.item-base-unit')?.value;
+        const basePriceStr = row.querySelector('.item-base-price')?.value;
+        const basePrice = parseFloat(basePriceStr);
+
+        if (name) {
+          items.push({
+            name,
+            baseUnit: baseUnit || '',
+            basePrice: isNaN(basePrice) ? 0 : basePrice
+          });
+        }
+      });
+      return items;
+    }
+
+    // Build calculator rows from items table
+    function rebuildCalculator() {
+      const existing = {};
+      // Preserve quantity and selected unit by item name if possible
+      calcBody.querySelectorAll('tr').forEach(tr => {
+        const name = tr.dataset.itemName;
+        if (!name) return;
+        const qty = tr.querySelector('.calc-qty')?.value;
+        const unit = tr.querySelector('.calc-unit')?.value;
+        existing[name] = { qty, unit };
+      });
+
+      calcBody.innerHTML = '';
+
+      const items = getItemsFromTable();
+      items.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.dataset.itemName = item.name;
+        tr.dataset.baseUnit = item.baseUnit;
+        tr.dataset.basePrice = item.basePrice;
+
+        // Name cell
+        const nameTd = document.createElement('td');
+        nameTd.textContent = item.name;
+        tr.appendChild(nameTd);
+
+        // Selected unit cell
+        const unitTd = document.createElement('td');
+        const unitSelect = document.createElement('select');
+        unitSelect.className = 'calc-unit';
+
+        const possibleUnits = getPossibleUnitsForBase(item.baseUnit);
+        possibleUnits.forEach(u => {
+          const opt = document.createElement('option');
+          opt.value = u;
+          opt.textContent = u;
+          unitSelect.appendChild(opt);
+        });
+
+        // Default selected unit
+        let defaultUnit = item.baseUnit;
+        if (existing[item.name]?.unit && possibleUnits.includes(existing[item.name].unit)) {
+          defaultUnit = existing[item.name].unit;
+        }
+        if (defaultUnit) {
+          unitSelect.value = defaultUnit;
+        }
+
+        unitTd.appendChild(unitSelect);
+        tr.appendChild(unitTd);
+
+        // Price per unit cell
+        const ppuTd = document.createElement('td');
+        const ppuInput = document.createElement('input');
+        ppuInput.type = 'number';
+        ppuInput.className = 'calc-price-per-unit';
+        ppuInput.step = '0.0001';
+        ppuInput.readOnly = true;
+        ppuTd.appendChild(ppuInput);
+        tr.appendChild(ppuTd);
+
+        // Quantity cell
+        const qtyTd = document.createElement('td');
+        const qtyInput = document.createElement('input');
+        qtyInput.type = 'number';
+        qtyInput.className = 'calc-qty';
+        qtyInput.step = '0.0001';
+        qtyInput.min = '0';
+        if (existing[item.name]?.qty) {
+          qtyInput.value = existing[item.name].qty;
+        }
+        qtyTd.appendChild(qtyInput);
+        tr.appendChild(qtyTd);
+
+        // Total cell
+        const totalTd = document.createElement('td');
+        const totalSpan = document.createElement('span');
+        totalSpan.className = 'calc-total';
+        totalSpan.textContent = '0.00';
+        totalTd.appendChild(totalSpan);
+        tr.appendChild(totalTd);
+
+        calcBody.appendChild(tr);
+
+        // Initial calc for row
+        recalcRow(tr);
+      });
+
+      recalcGrandTotal();
+    }
+
+    function getPossibleUnitsForBase(baseUnit) {
+      // Only g/kg can swap; m and pieces stay as is
+      if (baseUnit === 'g') return ['g', 'kg'];
+      if (baseUnit === 'kg') return ['g', 'kg'];
+      if (baseUnit === 'm') return ['m'];
+      if (baseUnit === 'pieces') return ['pieces'];
+      return [];
+    }
+
+    function computePricePerUnit(basePrice, baseUnit, selectedUnit) {
+      // handles g <-> kg conversion; others unchanged
+      if (baseUnit === 'g') {
+        if (selectedUnit === 'g') return basePrice;
+        if (selectedUnit === 'kg') return basePrice * 1000;
+      } else if (baseUnit === 'kg') {
+        if (selectedUnit === 'kg') return basePrice;
+        if (selectedUnit === 'g') return basePrice / 1000;
+      } else {
+        // m or pieces or unknown: 1:1, no conversion
+        return basePrice;
+      }
+      return basePrice;
+    }
+
+    function recalcRow(tr) {
+      const baseUnit = tr.dataset.baseUnit;
+      const basePrice = parseFloat(tr.dataset.basePrice) || 0;
+      const unitSelect = tr.querySelector('.calc-unit');
+      const selectedUnit = unitSelect ? unitSelect.value : baseUnit;
+
+      const ppuInput = tr.querySelector('.calc-price-per-unit');
+      const qtyInput = tr.querySelector('.calc-qty');
+      const totalSpan = tr.querySelector('.calc-total');
+
+      const pricePerUnit = computePricePerUnit(basePrice, baseUnit, selectedUnit);
+      ppuInput.value = pricePerUnit.toFixed(4);
+
+      const qty = parseFloat(qtyInput.value) || 0;
+      const total = pricePerUnit * qty;
+      totalSpan.textContent = total.toFixed(2);
+    }
+
+    function recalcGrandTotal() {
+      let sum = 0;
+      calcBody.querySelectorAll('.calc-total').forEach(span => {
+        const val = parseFloat(span.textContent);
+        if (!isNaN(val)) sum += val;
+      });
+      grandTotalSpan.textContent = sum.toFixed(2);
+    }
+
+    // Respond to changes inside calculator
+    calcBody.addEventListener('input', (e) => {
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+
+      if (e.target.classList.contains('calc-qty')) {
+        recalcRow(tr);
+        recalcGrandTotal();
+      }
+    });
+
+    calcBody.addEventListener('change', (e) => {
+      const tr = e.target.closest('tr');
+      if (!tr) return;
+
+      if (e.target.classList.contains('calc-unit')) {
+        recalcRow(tr);
+        recalcGrandTotal();
+      }
+    });
+
+    // Debounce helper so we don't rebuild constantly while typing
+    function debounce(fn, delay = 200) {
+      let timeout;
+      return (...args) => {
+        clearTimeout(timeout);
+        timeout = setTimeout(() => fn(...args), delay);
+      };
+    }
+
+    // Initial build
+    rebuildCalculator();
+  </script>
+</body>
+</html>
