@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8" />
-  <title>Items & Calculator</title>
+  <title>Items & Unit Price Calculator</title>
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body {
@@ -229,6 +229,7 @@
     const grandTotalSpan = document.getElementById('grand-total');
 
     const ALLOWED_UNITS = ['g', 'kg', 'm', 'pieces'];
+    const STORAGE_KEY = 'itemsCalculatorState_v1';
 
     function createBaseUnitSelect() {
       const select = document.createElement('select');
@@ -290,6 +291,7 @@
     addItemBtn.addEventListener('click', () => {
       addItemRow();
       rebuildCalculator();
+      saveState();
     });
 
     // Remove item row
@@ -297,13 +299,9 @@
       if (e.target.classList.contains('remove-btn')) {
         e.target.closest('tr').remove();
         rebuildCalculator();
+        saveState();
       }
     });
-
-    // When items change, rebuild calculator
-    itemsBody.addEventListener('input', debounce(rebuildCalculator, 200));
-    itemsBody.addEventListener('change', debounce(rebuildCalculator, 200));
-    rebuildCalcBtn.addEventListener('click', rebuildCalculator);
 
     function getItemsFromTable() {
       const rows = itemsBody.querySelectorAll('tr');
@@ -467,6 +465,83 @@
       grandTotalSpan.textContent = sum.toFixed(2);
     }
 
+    // Save full state (items + calculator)
+    function saveState() {
+      const items = getItemsFromTable();
+      const calculator = {};
+      calcBody.querySelectorAll('tr').forEach(tr => {
+        const name = tr.dataset.itemName;
+        if (!name) return;
+        const unitSelect = tr.querySelector('.calc-unit');
+        const qtyInput = tr.querySelector('.calc-qty');
+        calculator[name] = {
+          unit: unitSelect ? unitSelect.value : '',
+          qty: qtyInput ? qtyInput.value : ''
+        };
+      });
+
+      const payload = { items, calculator };
+      try {
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(payload));
+      } catch (e) {
+        console.warn('Unable to save state', e);
+      }
+    }
+
+    // Load state from localStorage
+    function loadState() {
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) {
+        rebuildCalculator();
+        return;
+      }
+
+      let parsed;
+      try {
+        parsed = JSON.parse(raw);
+      } catch (e) {
+        rebuildCalculator();
+        return;
+      }
+
+      const items = parsed.items || [];
+      const calcState = parsed.calculator || {};
+
+      if (items.length) {
+        itemsBody.innerHTML = '';
+        items.forEach(item => {
+          addItemRow(item.name, item.baseUnit, item.basePrice);
+        });
+      }
+
+      rebuildCalculator();
+
+      // Apply stored calculator state (units & quantities)
+      calcBody.querySelectorAll('tr').forEach(tr => {
+        const name = tr.dataset.itemName;
+        const state = calcState[name];
+        if (!state) return;
+
+        const unitSelect = tr.querySelector('.calc-unit');
+        const qtyInput = tr.querySelector('.calc-qty');
+
+        if (state.unit && unitSelect) {
+          const options = Array.from(unitSelect.options).map(o => o.value);
+          if (options.includes(state.unit)) {
+            unitSelect.value = state.unit;
+          }
+        }
+
+        if (typeof state.qty !== 'undefined' && qtyInput) {
+          qtyInput.value = state.qty;
+        }
+
+        recalcRow(tr);
+      });
+
+      recalcGrandTotal();
+    }
+
     // Respond to changes inside calculator
     calcBody.addEventListener('input', (e) => {
       const tr = e.target.closest('tr');
@@ -475,6 +550,7 @@
       if (e.target.classList.contains('calc-qty')) {
         recalcRow(tr);
         recalcGrandTotal();
+        saveState();
       }
     });
 
@@ -485,7 +561,13 @@
       if (e.target.classList.contains('calc-unit')) {
         recalcRow(tr);
         recalcGrandTotal();
+        saveState();
       }
+    });
+
+    rebuildCalcBtn.addEventListener('click', () => {
+      rebuildCalculator();
+      saveState();
     });
 
     // Debounce helper so we don't rebuild constantly while typing
@@ -497,8 +579,16 @@
       };
     }
 
-    // Initial build
-    rebuildCalculator();
+    const debouncedItemsChanged = debounce(() => {
+      rebuildCalculator();
+      saveState();
+    }, 200);
+
+    itemsBody.addEventListener('input', debouncedItemsChanged);
+    itemsBody.addEventListener('change', debouncedItemsChanged);
+
+    // Initial load
+    document.addEventListener('DOMContentLoaded', loadState);
   </script>
 </body>
 </html>
